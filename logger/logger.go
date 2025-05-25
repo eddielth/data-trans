@@ -138,7 +138,22 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 	timestamp := time.Now().Format("2006-01-02 15:04:05.000")
 	levelStr := levelNames[level]
 	msg := fmt.Sprintf(format, args...)
-	logEntry := fmt.Sprintf("%s [%s] %s:%d: %s\n", timestamp, levelStr, file, line, msg)
+
+	colorCode := ""
+	resetColor := "\033[0m"
+
+	switch level {
+	case DEBUG:
+		colorCode = "\033[90m" // 灰色
+	case INFO:
+		colorCode = "\033[32m" // 绿色
+	case WARN:
+		colorCode = "\033[33m" // 黄色
+	case ERROR:
+		colorCode = "\033[31m" // 红色
+	}
+
+	logEntry := fmt.Sprintf("%s [%s%s%s] %s:%d: %s\n", timestamp, colorCode, levelStr, resetColor, file, line, msg)
 
 	// 写入日志
 	n, err := io.WriteString(l.output, logEntry)
