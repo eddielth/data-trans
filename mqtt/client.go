@@ -2,13 +2,13 @@ package mqtt
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/eddielth/data-trans/config"
+	"github.com/eddielth/data-trans/logger"
 )
 
 // Client 表示MQTT客户端
@@ -42,11 +42,11 @@ func NewClient(config config.MQTTConfig, handler MessageHandler) (*Client, error
 
 	opts.SetAutoReconnect(true)
 	opts.SetConnectionLostHandler(func(_ mqtt.Client, err error) {
-		log.Printf("MQTT连接丢失: %v", err)
+		logger.Error("MQTT连接丢失: %v", err)
 	})
 
 	opts.SetReconnectingHandler(func(_ mqtt.Client, _ *mqtt.ClientOptions) {
-		log.Println("正在尝试重新连接MQTT服务器...")
+		logger.Info("正在尝试重新连接MQTT服务器...")
 	})
 
 	client := mqtt.NewClient(opts)
@@ -69,14 +69,14 @@ func (c *Client) Connect() error {
 		return err
 	}
 
-	log.Printf("已成功连接到MQTT服务器: %s", c.config.Broker)
+	logger.Info("已成功连接到MQTT服务器: %s", c.config.Broker)
 	return nil
 }
 
 // Subscribe 订阅指定主题
 func (c *Client) Subscribe(topic string) error {
 	token := c.client.Subscribe(topic, 0, func(_ mqtt.Client, msg mqtt.Message) {
-		log.Printf("收到来自主题 %s 的消息", msg.Topic())
+		logger.Debug("收到来自主题 %s 的消息", msg.Topic())
 		c.handler(msg.Topic(), msg.Payload())
 	})
 
@@ -88,14 +88,14 @@ func (c *Client) Subscribe(topic string) error {
 		return err
 	}
 
-	log.Printf("已成功订阅主题: %s", topic)
+	logger.Info("已成功订阅主题: %s", topic)
 	return nil
 }
 
 // Disconnect 断开与MQTT服务器的连接
 func (c *Client) Disconnect() {
 	c.client.Disconnect(250)
-	log.Println("已断开与MQTT服务器的连接")
+	logger.Info("已断开与MQTT服务器的连接")
 }
 
 // GetDeviceTypeFromTopic 从主题中提取设备类型

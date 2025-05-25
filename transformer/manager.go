@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/dop251/goja"
 	"github.com/eddielth/data-trans/config"
+	"github.com/eddielth/data-trans/logger"
 )
 
 // Manager 管理多个数据转换器
@@ -57,7 +60,7 @@ func NewManager(configs map[string]config.Transformer) (*Manager, error) {
 		}
 
 		manager.transformers[deviceType] = transformer
-		log.Printf("已为设备类型 %s 加载转换器", deviceType)
+		logger.Info("已为设备类型 %s 加载转换器", deviceType)
 	}
 
 	return manager, nil
@@ -70,17 +73,62 @@ func newTransformer(scriptCode, scriptPath string) (*Transformer, error) {
 
 	// 注入辅助函数
 	_ = vm.Set("log", func(msg string) {
-		log.Println("[JS]", msg)
+		logger.Info("[JS] %s", msg)
 	})
 
 	_ = vm.Set("parseJSON", func(jsonStr string) interface{} {
 		var data interface{}
 		err := json.Unmarshal([]byte(jsonStr), &data)
 		if err != nil {
-			log.Printf("解析JSON失败: %v", err)
+			logger.Warn("解析JSON失败: %v", err)
 			return nil
 		}
 		return data
+	})
+
+	// 格式化日期时间
+	_ = vm.Set("formatDate", func(timestamp int64, format string) string {
+		if format == "" {
+			format = "2006-01-02 15:04:05"
+		}
+		return time.Unix(timestamp, 0).Format(format)
+	})
+
+	// 单位转换
+	_ = vm.Set("convertTemperature", func(value float64, fromUnit string, toUnit string) float64 {
+		// 标准化单位
+		fromUnit = strings.ToUpper(fromUnit)
+		toUnit = strings.ToUpper(toUnit)
+
+		// 转换为摄氏度
+		var celsius float64
+		switch fromUnit {
+		case "C":
+			celsius = value
+		case "F":
+			celsius = (value - 32) * 5 / 9
+		case "K":
+			celsius = value - 273.15
+		default:
+			return value // 未知单位，返回原值
+		}
+
+		// 从摄氏度转换为目标单位
+		switch toUnit {
+		case "C":
+			return celsius
+		case "F":
+			return celsius*9/5 + 32
+		case "K":
+			return celsius + 273.15
+		default:
+			return celsius // 未知单位，返回摄氏度
+		}
+	})
+
+	// 数据验证
+	_ = vm.Set("validateRange", func(value float64, min float64, max float64) bool {
+		return value >= min && value <= max
 	})
 
 	// 执行脚本

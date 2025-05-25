@@ -9,10 +9,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Config 表示应用程序的配置
+// Config 表示应用程序的配置// 更新Config结构体
 type Config struct {
 	MQTT         MQTTConfig             `mapstructure:"mqtt"`
 	Transformers map[string]Transformer `mapstructure:"transformers"`
+	Storage      StorageConfig          `mapstructure:"storage"`
+	Logger       LoggerConfig           `mapstructure:"logger"`
 }
 
 // MQTTConfig 表示MQTT连接的配置
@@ -28,6 +30,15 @@ type MQTTConfig struct {
 type Transformer struct {
 	ScriptPath string `mapstructure:"script_path"`
 	ScriptCode string `mapstructure:"script_code"`
+}
+
+// LoggerConfig 表示日志配置
+type LoggerConfig struct {
+	Level      string `mapstructure:"level"`
+	FilePath   string `mapstructure:"file_path"`
+	MaxSize    int    `mapstructure:"max_size"`
+	MaxBackups int    `mapstructure:"max_backups"`
+	Console    bool   `mapstructure:"console"`
 }
 
 // ConfigChangeCallback 是配置文件变更时的回调函数类型
@@ -99,4 +110,23 @@ func WatchConfig(configPath string, callback ConfigChangeCallback) error {
 	})
 
 	return nil
+}
+
+// StorageConfig 表示存储配置
+type StorageConfig struct {
+	File     FileStorageConfig     `mapstructure:"file"`
+	Database DatabaseStorageConfig `mapstructure:"database"`
+}
+
+// FileStorageConfig 表示文件存储配置
+type FileStorageConfig struct {
+	Enabled bool   `mapstructure:"enabled"`
+	Path    string `mapstructure:"path"`
+}
+
+// DatabaseStorageConfig 表示数据库存储配置
+type DatabaseStorageConfig struct {
+	Enabled bool   `mapstructure:"enabled"`
+	Type    string `mapstructure:"type"`
+	DSN     string `mapstructure:"dsn"`
 }

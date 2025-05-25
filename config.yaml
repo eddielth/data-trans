@@ -8,7 +8,24 @@ mqtt:
     - "devices/temperature/+"
     - "devices/humidity/+"
     - "devices/gateway/+"
-
+# 日志配置
+logger:
+  level: "ERROR"       # 日志级别: DEBUG, INFO, WARN, ERROR
+  file_path: "./logs/app.log"  # 日志文件路径
+  max_size: 10        # 单个日志文件最大大小（MB）
+  max_backups: 5      # 最大保留的日志文件数量
+  console: true       # 是否同时输出到控制台
+# 存储配置
+storage:
+  # 文件存储
+  file:
+    enabled: true
+    path: "./data"
+  # 数据库存储
+  database:
+    enabled: false
+    type: "mysql"
+    dsn: "user:password@tcp(localhost:3306)/data_trans"
 # 转换器配置
 transformers:
   # 温度传感器转换器
