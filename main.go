@@ -12,40 +12,35 @@ import (
 	"github.com/eddielth/data-trans/transformer"
 )
 
-func main() {
-	// 配置文件路径
-	configPath := "config.yaml"
-
+// 初始化配置
+func initConfig(configPath string) (*config.Config, error) {
 	// 加载配置
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		logger.Error("加载配置失败: %v", err)
-		os.Exit(1)
+		return nil, err
 	}
+	return cfg, nil
+}
 
-	// 初始化日志系统
-	if err = logger.InitFromConfig(
+// 初始化日志系统
+func initLogger(cfg *config.Config) error {
+	err := logger.InitFromConfig(
 		cfg.Logger.Level,
 		cfg.Logger.FilePath,
 		cfg.Logger.MaxSize,
 		cfg.Logger.MaxBackups,
 		cfg.Logger.Console,
-	); err != nil {
+	)
+	if err != nil {
 		logger.Error("初始化日志系统失败: %v", err)
 		// 继续使用默认日志配置
 	}
+	return nil
+}
 
-	logger.Info("数据转换服务正在启动...")
-	defer logger.Close()
-
-	// 初始化转换器管理器
-	transformerManager, err := transformer.NewManager(cfg.Transformers)
-	if err != nil {
-		logger.Error("初始化转换器管理器失败: %v", err)
-		os.Exit(1)
-	}
-
-	// 初始化存储管理器
+// 初始化存储系统
+func initStorage(cfg *config.Config) (*storage.Manager, error) {
 	var storageBackends []storage.StorageBackend
 
 	// 添加文件存储后端
@@ -65,11 +60,12 @@ func main() {
 		// ...
 	}
 
-	storageManager := storage.NewManager(storageBackends)
-	defer storageManager.Close()
+	return storage.NewManager(storageBackends), nil
+}
 
-	// 初始化MQTT客户端
-	mqttClient, err := mqtt.NewClient(cfg.MQTT, func(topic string, payload []byte) {
+// 处理MQTT消息
+func handleMQTTMessage(transformerManager *transformer.Manager, storageManager *storage.Manager) mqtt.MessageHandler {
+	return func(topic string, payload []byte) {
 		// 根据主题确定设备类型
 		deviceType := mqtt.GetDeviceTypeFromTopic(topic)
 		if deviceType == "" {
@@ -93,17 +89,22 @@ func main() {
 		if err := storageManager.Store(deviceType, result); err != nil {
 			logger.Error("存储数据失败: %v", err)
 		}
-	})
+	}
+}
 
+// 初始化MQTT客户端
+func initMQTT(cfg *config.Config, messageHandler mqtt.MessageHandler) (*mqtt.Client, error) {
+	// 初始化MQTT客户端
+	mqttClient, err := mqtt.NewClient(cfg.MQTT, messageHandler)
 	if err != nil {
 		logger.Error("初始化MQTT客户端失败: %v", err)
-		os.Exit(1)
+		return nil, err
 	}
 
 	// 连接MQTT服务器
 	if err = mqttClient.Connect(); err != nil {
 		logger.Error("连接MQTT服务器失败: %v", err)
-		os.Exit(1)
+		return nil, err
 	}
 
 	// 订阅配置的主题
@@ -113,12 +114,16 @@ func main() {
 		}
 	}
 
-	// 监听配置文件变化
-	err = config.WatchConfig(configPath, func(newCfg *config.Config) error {
+	return mqttClient, nil
+}
+
+// 监听配置文件变化
+func watchConfigChanges(configPath string, transformerManager *transformer.Manager) error {
+	err := config.WatchConfig(configPath, func(newCfg *config.Config) error {
 		logger.Info("正在应用新的配置...")
 
 		// 检查并更新日志配置
-		if err = logger.InitFromConfig(
+		if err := logger.InitFromConfig(
 			newCfg.Logger.Level,
 			newCfg.Logger.FilePath,
 			newCfg.Logger.MaxSize,
@@ -132,7 +137,7 @@ func main() {
 
 		// 检查并更新转换器
 		for deviceType, transformerCfg := range newCfg.Transformers {
-			if err = transformerManager.ReloadTransformer(deviceType, transformerCfg); err != nil {
+			if err := transformerManager.ReloadTransformer(deviceType, transformerCfg); err != nil {
 				logger.Warn("重新加载转换器 %s 失败: %v", deviceType, err)
 				// 继续处理其他转换器，不中断整个过程
 			}
@@ -153,12 +158,62 @@ func main() {
 		logger.Info("已启动配置文件监听")
 	}
 
-	logger.Info("数据转换服务已启动，等待设备数据...")
+	return nil
+}
 
-	// 等待中断信号退出
+// 等待退出信号
+func waitForExitSignal() os.Signal {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	<-sigChan
+	return <-sigChan
+}
+
+func main() {
+	// 配置文件路径
+	configPath := "config.yaml"
+
+	// 初始化配置
+	cfg, err := initConfig(configPath)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	// 初始化日志系统
+	initLogger(cfg)
+	logger.Info("数据转换服务正在启动...")
+	defer logger.Close()
+
+	// 初始化转换器管理器
+	transformerManager, err := transformer.NewManager(cfg.Transformers)
+	if err != nil {
+		logger.Error("初始化转换器管理器失败: %v", err)
+		os.Exit(1)
+	}
+
+	// 初始化存储系统
+	storageManager, err := initStorage(cfg)
+	if err != nil {
+		logger.Error("初始化存储系统失败: %v", err)
+		os.Exit(1)
+	}
+	defer storageManager.Close()
+
+	// 创建消息处理函数
+	messageHandler := handleMQTTMessage(transformerManager, storageManager)
+
+	// 初始化MQTT客户端
+	mqttClient, err := initMQTT(cfg, messageHandler)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	// 监听配置文件变化
+	watchConfigChanges(configPath, transformerManager)
+
+	logger.Info("数据转换服务已启动，等待设备数据...")
+
+	// 等待退出信号
+	_ = waitForExitSignal()
 
 	// 断开连接
 	mqttClient.Disconnect()
