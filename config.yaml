@@ -10,7 +10,7 @@ mqtt:
     - "devices/gateway/+"
 # 日志配置
 logger:
-  level: "ERROR"       # 日志级别: DEBUG, INFO, WARN, ERROR
+  level: "DEBUG"       # 日志级别: DEBUG, INFO, WARN, ERROR
   file_path: "./logs/app.log"  # 日志文件路径
   max_size: 10        # 单个日志文件最大大小（MB）
   max_backups: 5      # 最大保留的日志文件数量

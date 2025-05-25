@@ -3,7 +3,6 @@ package transformer
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"sync"
@@ -205,6 +204,6 @@ func (m *Manager) ReloadTransformer(deviceType string, cfg config.Transformer) e
 	m.transformers[deviceType] = transformer
 	m.mutex.Unlock()
 
-	log.Printf("已重新加载设备类型 %s 的转换器", deviceType)
+	logger.Info("已重新加载设备类型 %s 的转换器", deviceType)
 	return nil
 }

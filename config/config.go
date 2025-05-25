@@ -1,15 +1,15 @@
 package config
 
 import (
-	"log"
 	"path/filepath"
 	"time"
 
+	"github.com/eddielth/data-trans/logger"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 )
 
-// Config 表示应用程序的配置// 更新Config结构体
+// Config 表示应用程序的配置
 type Config struct {
 	MQTT         MQTTConfig             `mapstructure:"mqtt"`
 	Transformers map[string]Transformer `mapstructure:"transformers"`
@@ -89,23 +89,23 @@ func WatchConfig(configPath string, callback ConfigChangeCallback) error {
 			}
 			lastChangeTime = now
 
-			log.Printf("检测到配置文件变更: %s", e.Name)
+			logger.Info("检测到配置文件变更: %s", e.Name)
 
 			// 重新加载配置
 			var newConfig Config
 			err := viper.Unmarshal(&newConfig)
 			if err != nil {
-				log.Printf("解析更新后的配置失败: %v", err)
+				logger.Error("解析更新后的配置失败: %v", err)
 				return
 			}
 
 			// 调用回调函数处理新配置
 			if err := callback(&newConfig); err != nil {
-				log.Printf("应用新配置失败: %v", err)
+				logger.Error("应用新配置失败: %v", err)
 				return
 			}
 
-			log.Println("配置已成功更新并应用")
+			logger.Info("配置已成功更新并应用")
 		}
 	})
 
