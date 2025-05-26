@@ -5,8 +5,6 @@
 
 // 转换函数，接收原始数据字符串，返回标准化的数据对象
 function transform(data) {
-  log("处理温度传感器数据: " + data);
-  
   // 尝试解析JSON数据
   var parsed;
   try {
@@ -20,27 +18,43 @@ function transform(data) {
     return { error: "无效的数据格式" };
   }
   
-  // 处理第一种可能的数据格式 (例如: {"temp": 25.5, "unit": "C", "device_id": "temp001"})
+  // 处理第一种可能的数据格式 (例如: {"temp": 25.5, "unit": "C", "device_name": "temp001"})
   if (parsed.temp !== undefined) {
     return {
-      device_id: parsed.device_id || "unknown",
+      device_name: parsed.device_name || "unknown",
+      device_type: "temperature",
       timestamp: parsed.timestamp || Date.now(),
-      temperature: parsed.temp,
-      unit: parsed.unit || "C",
-      battery: parsed.battery || null,
-      raw: parsed
+      attributes: [{
+        name: "temperature",
+        type: "float",
+        value: parsed.temp,
+        unit: parsed.unit || "C",
+        quality: 100,
+        metadata: {}
+      }],
+      metadata: {
+        original_data: parsed
+      }
     };
   }
   
   // 处理第二种可能的数据格式 (例如: {"temperature": {"value": 25.5, "scale": "celsius"}, "sensor": {"id": "temp001"}})
   if (parsed.temperature && typeof parsed.temperature === "object") {
     return {
-      device_id: parsed.sensor && parsed.sensor.id ? parsed.sensor.id : "unknown",
+      device_name: parsed.sensor && parsed.sensor.id ? parsed.sensor.id : "unknown",
+      device_type: "temperature",
       timestamp: parsed.timestamp || Date.now(),
-      temperature: parsed.temperature.value,
-      unit: convertTemperatureUnit(parsed.temperature.scale),
-      battery: parsed.sensor && parsed.sensor.battery ? parsed.sensor.battery : null,
-      raw: parsed
+      attributes: [{
+        name: "temperature",
+        type: "float",
+        value: parsed.temperature.value,
+        unit: convertTemperatureUnit(parsed.temperature.scale),
+        quality: 100,
+        metadata: {}
+      }],
+      metadata: {
+        original_data: parsed
+      }
     };
   }
   
@@ -49,15 +63,23 @@ function transform(data) {
     var tempReading = parsed.readings.find(function(r) {
       return r.type === "temperature" || r.name === "temperature";
     });
-    
+
     if (tempReading) {
       return {
-        device_id: parsed.id || "unknown",
+        device_name: parsed.id || "unknown",
+        device_type: "temperature",
         timestamp: parsed.timestamp || Date.now(),
-        temperature: tempReading.value,
-        unit: tempReading.unit || "C",
-        battery: parsed.battery || null,
-        raw: parsed
+        attributes: [{
+          name: "temperature",
+          type: "float",
+          value: tempReading.value,
+          unit: tempReading.unit || "C",
+          quality: tempReading.quality || 100,
+          metadata: {}
+        }],
+        metadata: {
+          original_data: parsed
+        }
       };
     }
   }
@@ -111,11 +133,10 @@ function parseNonJsonFormat(data) {
     // 检查是否找到温度数据
     if (result.temp !== undefined || result.temperature !== undefined) {
       return {
-        device_id: result.id || result.device_id || "unknown",
+        device_name: result.id || result.device_name || "unknown",
         timestamp: Date.now(),
         temperature: result.temp || result.temperature,
         unit: result.unit || "C",
-        battery: result.battery || null,
         raw: result
       };
     }
@@ -125,7 +146,7 @@ function parseNonJsonFormat(data) {
   var numValue = parseFloat(data);
   if (!isNaN(numValue)) {
     return {
-      device_id: "unknown",
+      device_name: "unknown",
       timestamp: Date.now(),
       temperature: numValue,
       unit: "C",  // 假设默认单位是摄氏度

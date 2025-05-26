@@ -7,7 +7,6 @@ mqtt:
   topics:
     - "devices/temperature/+"
     - "devices/humidity/+"
-    - "devices/gateway/+"
 # 日志配置
 logger:
   level: "DEBUG"       # 日志级别: DEBUG, INFO, WARN, ERROR
@@ -35,36 +34,3 @@ transformers:
   # 湿度传感器转换器
   humidity:
     script_path: "./scripts/humidity.js"
-  
-  # 网关设备转换器
-  gateway:
-    script_code: |
-      // 内联JavaScript转换脚本
-      function transform(data) {
-        log("处理网关数据: " + data);
-        
-        // 解析JSON数据
-        var parsed = parseJSON(data);
-        if (!parsed) return { error: "无效的JSON数据" };
-        
-        // 提取所有连接的设备信息
-        var devices = [];
-        if (parsed.connected_devices && Array.isArray(parsed.connected_devices)) {
-          devices = parsed.connected_devices.map(function(dev) {
-            return {
-              id: dev.id || "unknown",
-              type: dev.type || "unknown",
-              status: dev.online ? "online" : "offline"
-            };
-          });
-        }
-        
-        // 返回标准化数据
-        return {
-          gateway_id: parsed.gateway_id || parsed.id || "unknown",
-          timestamp: parsed.timestamp || Date.now(),
-          firmware_version: parsed.version || "unknown",
-          devices: devices,
-          raw: parsed
-        };
-      }

@@ -57,7 +57,6 @@ mqtt:
   topics:
     - "devices/temperature/+"
     - "devices/humidity/+"
-    - "devices/gateway/+"
 
 # 转换器配置
 transformers:
@@ -69,13 +68,6 @@ transformers:
   humidity:
     script_path: "./scripts/humidity.js"
   
-  # 网关设备转换器
-  gateway:
-    script_code: |
-      // 内联JavaScript转换脚本
-      function transform(data) {
-        // 转换逻辑...
-      }
 ```
 
 ### 配置项说明
@@ -107,11 +99,10 @@ function transform(data) {
   
   // 转换数据
   return {
-    device_id: parsed.id || "unknown",
+    device_name: parsed.id || "unknown",
     timestamp: parsed.timestamp || Date.now(),
     temperature: parsed.temp,
     unit: parsed.unit || "C",
-    battery: parsed.battery || null,
     raw: parsed
   };
 }
@@ -127,13 +118,12 @@ function transform(data) {
 服务默认使用以下格式的主题：
 
 ```
-devices/{device_type}/{device_id}
+devices/{device_type}/{device_name}
 ```
 
 例如：
 - `devices/temperature/temp001`
 - `devices/humidity/hum001`
-- `devices/gateway/gw001`
 
 ## 开发
 

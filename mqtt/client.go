@@ -177,7 +177,7 @@ func (c *Client) Disconnect() {
 }
 
 // GetDeviceTypeFromTopic 从主题中提取设备类型
-// 假设主题格式为: devices/{device_type}/{device_id}
+// 假设主题格式为: devices/{device_type}/{device_name}
 func GetDeviceTypeFromTopic(topic string) string {
 	// 使用正则表达式匹配主题格式
 	re := regexp.MustCompile(`devices/([^/]+)/.*`)

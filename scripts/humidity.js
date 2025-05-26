@@ -22,25 +22,43 @@ function transform(data) {
     return { error: "无效的数据格式" };
   }
   
-  // 处理第一种可能的数据格式 (例如: {"humidity": 65, "device_id": "hum001"})
+  // 处理第一种可能的数据格式 (例如: {"humidity": 65, "device_name": "hum001"})
   if (parsed.humidity !== undefined) {
     return {
-      device_id: parsed.device_id || "unknown",
+      device_name: parsed.device_name || "unknown",
+      device_type: "humidity",
       timestamp: parsed.timestamp || Date.now(),
-      humidity: parsed.humidity,
-      battery: parsed.battery || null,
-      raw: parsed
+      attributes: [{
+        name: "humidity",
+        type: "float",
+        value: parsed.humidity,
+        unit: "%RH",
+        quality: 100,
+        metadata: {}
+      }],
+      metadata: {
+        original_data: parsed
+      }
     };
   }
   
   // 处理第二种可能的数据格式 (例如: {"data": {"hum": 65}, "id": "hum001"})
   if (parsed.data && typeof parsed.data === "object" && parsed.data.hum !== undefined) {
     return {
-      device_id: parsed.id || "unknown",
+      device_name: parsed.id || "unknown",
+      device_type: "humidity",
       timestamp: parsed.timestamp || Date.now(),
-      humidity: parsed.data.hum,
-      battery: parsed.battery || null,
-      raw: parsed
+      attributes: [{
+        name: "humidity",
+        type: "float",
+        value: parsed.data.hum,
+        unit: "%RH",
+        quality: 100,
+        metadata: {}
+      }],
+      metadata: {
+        original_data: parsed
+      }
     };
   }
   
@@ -49,14 +67,23 @@ function transform(data) {
     var humReading = parsed.readings.find(function(r) {
       return r.type === "humidity" || r.name === "humidity" || r.type === "hum";
     });
-    
+
     if (humReading) {
       return {
-        device_id: parsed.id || "unknown",
+        device_name: parsed.id || "unknown",
+        device_type: "humidity",
         timestamp: parsed.timestamp || Date.now(),
-        humidity: humReading.value,
-        battery: parsed.battery || null,
-        raw: parsed
+        attributes: [{
+          name: "humidity",
+          type: "float",
+          value: humReading.value,
+          unit: humReading.unit || "%RH",
+          quality: humReading.quality || 100,
+          metadata: {}
+        }],
+        metadata: {
+          original_data: parsed
+        }
       };
     }
   }
@@ -93,10 +120,9 @@ function parseNonJsonFormat(data) {
     // 检查是否找到湿度数据
     if (result.hum !== undefined || result.humidity !== undefined) {
       return {
-        device_id: result.id || result.device_id || "unknown",
+        device_name: result.id || result.device_name || "unknown",
         timestamp: Date.now(),
         humidity: result.hum || result.humidity,
-        battery: result.battery || null,
         raw: result
       };
     }
@@ -106,7 +132,7 @@ function parseNonJsonFormat(data) {
   var numValue = parseFloat(data);
   if (!isNaN(numValue)) {
     return {
-      device_id: "unknown",
+      device_name: "unknown",
       timestamp: Date.now(),
       humidity: numValue,
       raw: data
