@@ -9,6 +9,8 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/eddielth/data-trans/config"
 	"github.com/eddielth/data-trans/logger"
+	"github.com/eddielth/data-trans/storage"
+	"github.com/eddielth/data-trans/transformer"
 )
 
 // Client 表示MQTT客户端
@@ -21,8 +23,84 @@ type Client struct {
 // MessageHandler 是处理MQTT消息的回调函数类型
 type MessageHandler func(topic string, payload []byte)
 
-// NewClient 创建一个新的MQTT客户端
-func NewClient(config config.MQTTConfig, handler MessageHandler) (*Client, error) {
+// Manager MQTT管理器
+type Manager struct {
+	client             *Client
+	transformerManager *transformer.Manager
+	storageManager     *storage.Manager
+}
+
+// NewManager 创建一个新的MQTT管理器
+func NewManager(cfg *config.Config, transformerManager *transformer.Manager, storageManager *storage.Manager) (*Manager, error) {
+	// 创建消息处理函数
+	messageHandler := createMessageHandler(transformerManager, storageManager)
+
+	// 初始化MQTT客户端
+	mqttClient, err := newClient(cfg.MQTT, messageHandler)
+	if err != nil {
+		return nil, fmt.Errorf("初始化MQTT客户端失败: %v", err)
+	}
+
+	return &Manager{
+		client:             mqttClient,
+		transformerManager: transformerManager,
+		storageManager:     storageManager,
+	}, nil
+}
+
+// Start 启动MQTT服务
+func (m *Manager) Start() error {
+	// 连接MQTT服务器
+	if err := m.client.Connect(); err != nil {
+		return fmt.Errorf("连接MQTT服务器失败: %v", err)
+	}
+
+	// 订阅配置的主题
+	for _, topic := range m.client.config.Topics {
+		if err := m.client.Subscribe(topic); err != nil {
+			logger.Warn("订阅主题 %s 失败: %v", topic, err)
+		}
+	}
+
+	return nil
+}
+
+// Stop 停止MQTT服务
+func (m *Manager) Stop() {
+	m.client.Disconnect()
+}
+
+// createMessageHandler 创建MQTT消息处理函数
+func createMessageHandler(transformerManager *transformer.Manager, storageManager *storage.Manager) MessageHandler {
+	return func(topic string, payload []byte) {
+		// 根据主题确定设备类型
+		deviceType := GetDeviceTypeFromTopic(topic)
+		if deviceType == "" {
+			logger.Warn("无法从主题 %s 确定设备类型", topic)
+			return
+		}
+
+		logger.Debug("收到来自设备类型 %s 的数据: %s", deviceType, string(payload))
+
+		// 使用对应的转换器处理数据
+		result, err := transformerManager.Transform(deviceType, payload)
+		if err != nil {
+			logger.Error("转换数据失败 [%s]: %v", deviceType, err)
+			return
+		}
+
+		// 处理转换后的数据
+		logger.Info("设备类型: %s, 转换后数据: %v", deviceType, result)
+
+		// 存储数据
+		if err := storageManager.Store(deviceType, result); err != nil {
+			logger.Error("存储数据失败: %v", err)
+		}
+	}
+}
+
+// newClient 创建一个新的MQTT客户端
+func newClient(config config.MQTTConfig, handler MessageHandler) (*Client, error) {
 	if config.Broker == "" {
 		return nil, fmt.Errorf("MQTT broker地址不能为空")
 	}

@@ -63,60 +63,6 @@ func initStorage(cfg *config.Config) (*storage.Manager, error) {
 	return storage.NewManager(storageBackends), nil
 }
 
-// 处理MQTT消息
-func handleMQTTMessage(transformerManager *transformer.Manager, storageManager *storage.Manager) mqtt.MessageHandler {
-	return func(topic string, payload []byte) {
-		// 根据主题确定设备类型
-		deviceType := mqtt.GetDeviceTypeFromTopic(topic)
-		if deviceType == "" {
-			logger.Warn("无法从主题 %s 确定设备类型", topic)
-			return
-		}
-
-		logger.Debug("收到来自设备类型 %s 的数据: %s", deviceType, string(payload))
-
-		// 使用对应的转换器处理数据
-		result, err := transformerManager.Transform(deviceType, payload)
-		if err != nil {
-			logger.Error("转换数据失败 [%s]: %v", deviceType, err)
-			return
-		}
-
-		// 处理转换后的数据
-		logger.Info("设备类型: %s, 转换后数据: %v", deviceType, result)
-
-		// 存储数据
-		if err := storageManager.Store(deviceType, result); err != nil {
-			logger.Error("存储数据失败: %v", err)
-		}
-	}
-}
-
-// 初始化MQTT客户端
-func initMQTT(cfg *config.Config, messageHandler mqtt.MessageHandler) (*mqtt.Client, error) {
-	// 初始化MQTT客户端
-	mqttClient, err := mqtt.NewClient(cfg.MQTT, messageHandler)
-	if err != nil {
-		logger.Error("初始化MQTT客户端失败: %v", err)
-		return nil, err
-	}
-
-	// 连接MQTT服务器
-	if err = mqttClient.Connect(); err != nil {
-		logger.Error("连接MQTT服务器失败: %v", err)
-		return nil, err
-	}
-
-	// 订阅配置的主题
-	for _, topic := range cfg.MQTT.Topics {
-		if err = mqttClient.Subscribe(topic); err != nil {
-			logger.Warn("订阅主题 %s 失败: %v", topic, err)
-		}
-	}
-
-	return mqttClient, nil
-}
-
 // 监听配置文件变化
 func watchConfigChanges(configPath string, transformerManager *transformer.Manager) error {
 	err := config.WatchConfig(configPath, func(newCfg *config.Config) error {
@@ -198,12 +144,16 @@ func main() {
 	}
 	defer storageManager.Close()
 
-	// 创建消息处理函数
-	messageHandler := handleMQTTMessage(transformerManager, storageManager)
-
-	// 初始化MQTT客户端
-	mqttClient, err := initMQTT(cfg, messageHandler)
+	// 初始化MQTT管理器
+	mqttManager, err := mqtt.NewManager(cfg, transformerManager, storageManager)
 	if err != nil {
+		logger.Error("初始化MQTT管理器失败: %v", err)
+		os.Exit(1)
+	}
+
+	// 启动MQTT服务
+	if err := mqttManager.Start(); err != nil {
+		logger.Error("启动MQTT服务失败: %v", err)
 		os.Exit(1)
 	}
 
@@ -215,7 +165,7 @@ func main() {
 	// 等待退出信号
 	_ = waitForExitSignal()
 
-	// 断开连接
-	mqttClient.Disconnect()
+	// 停止MQTT服务
+	mqttManager.Stop()
 	logger.Info("服务已安全停止")
 }
