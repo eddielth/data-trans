@@ -125,7 +125,7 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 	defer l.mu.Unlock()
 
 	// 获取调用者信息
-	_, file, line, ok := runtime.Caller(2)
+	_, file, line, ok := runtime.Caller(3)
 	if !ok {
 		file = "unknown"
 		line = 0
