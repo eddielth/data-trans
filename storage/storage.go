@@ -62,3 +62,47 @@ func (m *Manager) AddBackend(backend StorageBackend) {
 
 	m.backends = append(m.backends, backend)
 }
+
+// RemoveBackendByType 根据后端类型删除存储后端
+func (m *Manager) RemoveBackendByType(backendType string) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	var newBackends []StorageBackend
+	for _, backend := range m.backends {
+		// 检查后端类型
+		switch backend.(type) {
+		case *MySQLStorage:
+			if backendType != "mysql" {
+				newBackends = append(newBackends, backend)
+			} else {
+				// 关闭要移除的后端连接
+				if err := backend.Close(); err != nil {
+					logger.Error("关闭MySQL存储后端连接失败: %v", err)
+				}
+				logger.Info("已移除MySQL存储后端")
+			}
+		case *PostgreSQLStorage:
+			if backendType != "postgresql" {
+				newBackends = append(newBackends, backend)
+			} else {
+				// 关闭要移除的后端连接
+				if err := backend.Close(); err != nil {
+					logger.Error("关闭PostgreSQL存储后端连接失败: %v", err)
+				}
+				logger.Info("已移除PostgreSQL存储后端")
+			}
+		case *FileStorage:
+			if backendType != "file" {
+				newBackends = append(newBackends, backend)
+			} else {
+				logger.Info("已移除文件存储后端")
+			}
+		default:
+			// 保留未知类型的后端
+			newBackends = append(newBackends, backend)
+		}
+	}
+
+	m.backends = newBackends
+}

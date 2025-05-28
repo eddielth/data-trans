@@ -8,6 +8,8 @@ require (
 	github.com/dop251/goja v0.0.0-20250309171923-bcd7cc6bf64c
 	github.com/eclipse/paho.mqtt.golang v1.5.0
 	github.com/fsnotify/fsnotify v1.9.0
+	github.com/go-sql-driver/mysql v1.7.1
+	github.com/lib/pq v1.10.9
 	github.com/spf13/viper v1.20.1
 )
 

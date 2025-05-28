@@ -22,8 +22,11 @@ storage:
     path: "./data"
   # 数据库存储
   database:
-    enabled: false
+    enabled: true
+    # 数据库类型: mysql 或 postgresql
     type: "mysql"
+    # MySQL连接字符串示例: user:password@tcp(localhost:3306)/data_trans
+    # PostgreSQL连接字符串示例: postgres://user:password@localhost:5432/data_trans?sslmode=disable
     dsn: "user:password@tcp(localhost:3306)/data_trans"
 # 转换器配置
 transformers:

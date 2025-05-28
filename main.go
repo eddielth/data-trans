@@ -54,17 +54,23 @@ func initStorage(cfg *config.Config) (*storage.Manager, error) {
 		}
 	}
 
-	// 添加数据库存储后端（如果已实现）
+	// 添加数据库存储后端
 	if cfg.Storage.Database.Enabled {
 		// 初始化数据库存储
-		// ...
+		dbStorage, err := storage.NewDatabaseStorage(cfg.Storage.Database.Type, cfg.Storage.Database.DSN)
+		if err != nil {
+			logger.Warn("初始化数据库存储失败: %v", err)
+		} else {
+			storageBackends = append(storageBackends, dbStorage)
+			logger.Info("已启用%s数据库存储", cfg.Storage.Database.Type)
+		}
 	}
 
 	return storage.NewManager(storageBackends), nil
 }
 
 // 监听配置文件变化
-func watchConfigChanges(configPath string, transformerManager *transformer.Manager) error {
+func watchConfigChanges(configPath string, transformerManager *transformer.Manager, storageManager *storage.Manager) error {
 	err := config.WatchConfig(configPath, func(newCfg *config.Config) error {
 		logger.Info("正在应用新的配置...")
 
@@ -86,6 +92,22 @@ func watchConfigChanges(configPath string, transformerManager *transformer.Manag
 			if err := transformerManager.ReloadTransformer(deviceType, transformerCfg); err != nil {
 				logger.Warn("重新加载转换器 %s 失败: %v", deviceType, err)
 				// 继续处理其他转换器，不中断整个过程
+			}
+		}
+
+		// 检查并更新数据库存储配置
+		if newCfg.Storage.Database.Enabled {
+			// 先移除同类型的旧数据库后端
+			storageManager.RemoveBackendByType(newCfg.Storage.Database.Type)
+
+			// 初始化新的数据库连接
+			dbStorage, err := storage.NewDatabaseStorage(newCfg.Storage.Database.Type, newCfg.Storage.Database.DSN)
+			if err != nil {
+				logger.Warn("重新加载数据库存储失败: %v", err)
+			} else {
+				// 添加新的数据库后端
+				storageManager.AddBackend(dbStorage)
+				logger.Info("已重新加载%s数据库存储", newCfg.Storage.Database.Type)
 			}
 		}
 
@@ -158,7 +180,7 @@ func main() {
 	}
 
 	// 监听配置文件变化
-	watchConfigChanges(configPath, transformerManager)
+	watchConfigChanges(configPath, transformerManager, storageManager)
 
 	logger.Info("数据转换服务已启动，等待设备数据...")
 
