@@ -4,12 +4,13 @@ import (
 	"sync"
 
 	"github.com/eddielth/data-trans/logger"
+	"github.com/eddielth/data-trans/transformer"
 )
 
 // StorageBackend 表示存储后端接口
 type StorageBackend interface {
 	// Store 存储数据
-	Store(deviceType string, data interface{}) error
+	Store(deviceType string, data transformer.DeviceData) error
 	// Close 关闭存储连接
 	Close() error
 }
@@ -28,7 +29,7 @@ func NewManager(backends []StorageBackend) *Manager {
 }
 
 // Store 将数据存储到所有后端
-func (m *Manager) Store(deviceType string, data interface{}) error {
+func (m *Manager) Store(deviceType string, data transformer.DeviceData) error {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 

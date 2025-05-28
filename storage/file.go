@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/eddielth/data-trans/logger"
+	"github.com/eddielth/data-trans/transformer"
 )
 
 // FileStorage 表示文件存储后端
@@ -29,7 +30,7 @@ func NewFileStorage(basePath string) (*FileStorage, error) {
 }
 
 // Store 将数据存储到文件
-func (fs *FileStorage) Store(deviceType string, data interface{}) error {
+func (fs *FileStorage) Store(deviceType string, data transformer.DeviceData) error {
 	// 创建设备类型目录
 	deviceDir := filepath.Join(fs.basePath, deviceType)
 	if err := os.MkdirAll(deviceDir, 0755); err != nil {

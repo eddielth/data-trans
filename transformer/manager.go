@@ -155,23 +155,42 @@ func newTransformer(scriptCode, scriptPath string) (*Transformer, error) {
 }
 
 // Transform 使用指定设备类型的转换器转换数据
-func (m *Manager) Transform(deviceType string, data []byte) (interface{}, error) {
+func (m *Manager) Transform(deviceType string, data []byte) (DeviceData, error) {
 	m.mutex.RLock()
 	transformer, exists := m.transformers[deviceType]
 	m.mutex.RUnlock()
 
 	if !exists {
-		return nil, fmt.Errorf("没有找到设备类型 %s 的转换器", deviceType)
+		return DeviceData{}, fmt.Errorf("没有找到设备类型 %s 的转换器", deviceType)
 	}
 
 	// 调用JavaScript转换函数
 	result, err := transformer.transform(goja.Undefined(), transformer.vm.ToValue(string(data)))
 	if err != nil {
-		return nil, fmt.Errorf("执行转换失败: %v", err)
+		return DeviceData{}, fmt.Errorf("执行转换失败: %v", err)
 	}
 
 	// 将JavaScript值导出为Go值
-	return result.Export(), nil
+	jsResult := result.Export()
+
+	// 将结果转换为JSON
+	jsonData, err := json.Marshal(jsResult)
+	if err != nil {
+		return DeviceData{}, fmt.Errorf("序列化JavaScript结果失败: %v", err)
+	}
+
+	// 解析为DeviceData结构
+	var deviceData DeviceData
+	if err := json.Unmarshal(jsonData, &deviceData); err != nil {
+		return DeviceData{}, fmt.Errorf("解析为DeviceData结构失败: %v", err)
+	}
+
+	// 确保设备类型字段正确设置
+	if deviceData.DeviceType == "" {
+		deviceData.DeviceType = deviceType
+	}
+
+	return deviceData, nil
 }
 
 // ReloadTransformer 重新加载指定设备类型的转换器
