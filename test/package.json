@@ -1,0 +1,21 @@
+{
+  "name": "data-trans-test",
+  "version": "1.0.0",
+  "description": "数据上报测试脚本",
+  "main": "continuous_data_report.js",
+  "scripts": {
+    "test:single": "node single_temperature_report.js",
+    "test:batch": "node batch_humidity_report.js",
+    "test:continuous": "node continuous_data_report.js"
+  },
+  "keywords": [
+    "mqtt",
+    "iot",
+    "test"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "mqtt": "^4.3.7"
+  }
+}
