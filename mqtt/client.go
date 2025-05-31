@@ -13,32 +13,32 @@ import (
 	"github.com/eddielth/data-trans/transformer"
 )
 
-// Client 表示MQTT客户端
+// Client represents an MQTT client
 type Client struct {
 	client  mqtt.Client
 	config  config.MQTTConfig
 	handler MessageHandler
 }
 
-// MessageHandler 是处理MQTT消息的回调函数类型
+// MessageHandler is the callback function type for handling MQTT messages
 type MessageHandler func(topic string, payload []byte)
 
-// Manager MQTT管理器
+// Manager MQTT Manager
 type Manager struct {
 	client             *Client
 	transformerManager *transformer.Manager
 	storageManager     *storage.Manager
 }
 
-// NewManager 创建一个新的MQTT管理器
+// NewManager creates a new MQTT manager
 func NewManager(cfg *config.Config, transformerManager *transformer.Manager, storageManager *storage.Manager) (*Manager, error) {
-	// 创建消息处理函数
+	// Create message handler function
 	messageHandler := createMessageHandler(transformerManager, storageManager)
 
-	// 初始化MQTT客户端
+	// Initialize MQTT client
 	mqttClient, err := newClient(cfg.MQTT, messageHandler)
 	if err != nil {
-		return nil, fmt.Errorf("初始化MQTT客户端失败: %v", err)
+		return nil, fmt.Errorf("failed to initialize MQTT client: %v", err)
 	}
 
 	return &Manager{
@@ -48,61 +48,61 @@ func NewManager(cfg *config.Config, transformerManager *transformer.Manager, sto
 	}, nil
 }
 
-// Start 启动MQTT服务
+// Start starts the MQTT service
 func (m *Manager) Start() error {
-	// 连接MQTT服务器
+	// Connect to MQTT broker
 	if err := m.client.Connect(); err != nil {
-		return fmt.Errorf("连接MQTT服务器失败: %v", err)
+		return fmt.Errorf("failed to connect to MQTT broker: %v", err)
 	}
 
-	// 订阅配置的主题
+	// Subscribe to configured topics
 	for _, topic := range m.client.config.Topics {
 		if err := m.client.Subscribe(topic); err != nil {
-			logger.Warn("订阅主题 %s 失败: %v", topic, err)
+			logger.Warn("failed to subscribe to topic %s: %v", topic, err)
 		}
 	}
 
 	return nil
 }
 
-// Stop 停止MQTT服务
+// Stop stops the MQTT service
 func (m *Manager) Stop() {
 	m.client.Disconnect()
 }
 
-// createMessageHandler 创建MQTT消息处理函数
+// createMessageHandler creates an MQTT message handler function
 func createMessageHandler(transformerManager *transformer.Manager, storageManager *storage.Manager) MessageHandler {
 	return func(topic string, payload []byte) {
-		// 根据主题确定设备类型
+		// Determine device type based on topic
 		deviceType := GetDeviceTypeFromTopic(topic)
 		if deviceType == "" {
-			logger.Warn("无法从主题 %s 确定设备类型", topic)
+			logger.Warn("unable to determine device type from topic %s", topic)
 			return
 		}
 
-		logger.Debug("收到来自设备类型 %s 的数据: %s", deviceType, string(payload))
+		logger.Debug("received data from device type %s: %s", deviceType, string(payload))
 
-		// 使用对应的转换器处理数据
+		// Process data using corresponding transformer
 		result, err := transformerManager.Transform(deviceType, payload)
 		if err != nil {
-			logger.Error("转换数据失败 [%s]: %v", deviceType, err)
+			logger.Error("failed to transform data [%s]: %v", deviceType, err)
 			return
 		}
 
-		// 处理转换后的数据
-		logger.Info("设备类型: %s, 转换后数据: %v", deviceType, result)
+		// Process transformed data
+		logger.Info("device type: %s, transformed data: %v", deviceType, result)
 
-		// 存储数据
+		// Store data
 		if err := storageManager.Store(deviceType, result); err != nil {
-			logger.Error("存储数据失败: %v", err)
+			logger.Error("failed to store data: %v", err)
 		}
 	}
 }
 
-// newClient 创建一个新的MQTT客户端
+// newClient creates a new MQTT client
 func newClient(config config.MQTTConfig, handler MessageHandler) (*Client, error) {
 	if config.Broker == "" {
-		return nil, fmt.Errorf("MQTT broker地址不能为空")
+		return nil, fmt.Errorf("MQTT broker address cannot be empty")
 	}
 
 	opts := mqtt.NewClientOptions()
@@ -120,11 +120,11 @@ func newClient(config config.MQTTConfig, handler MessageHandler) (*Client, error
 
 	opts.SetAutoReconnect(true)
 	opts.SetConnectionLostHandler(func(_ mqtt.Client, err error) {
-		logger.Error("MQTT连接丢失: %v", err)
+		logger.Error("MQTT connection lost: %v", err)
 	})
 
 	opts.SetReconnectingHandler(func(_ mqtt.Client, _ *mqtt.ClientOptions) {
-		logger.Info("正在尝试重新连接MQTT服务器...")
+		logger.Info("trying to reconnect to MQTT broker...")
 	})
 
 	client := mqtt.NewClient(opts)
@@ -136,50 +136,50 @@ func newClient(config config.MQTTConfig, handler MessageHandler) (*Client, error
 	}, nil
 }
 
-// Connect 连接到MQTT服务器
+// Connect connects to the MQTT broker
 func (c *Client) Connect() error {
 	token := c.client.Connect()
 	if !token.WaitTimeout(10 * time.Second) {
-		return fmt.Errorf("连接MQTT服务器超时")
+		return fmt.Errorf("connection to MQTT broker timed out")
 	}
 
 	if err := token.Error(); err != nil {
 		return err
 	}
 
-	logger.Info("已成功连接到MQTT服务器: %s", c.config.Broker)
+	logger.Info("successfully connected to MQTT broker: %s", c.config.Broker)
 	return nil
 }
 
-// Subscribe 订阅指定主题
+// Subscribe subscribes to the specified topic
 func (c *Client) Subscribe(topic string) error {
 	token := c.client.Subscribe(topic, 0, func(_ mqtt.Client, msg mqtt.Message) {
-		logger.Debug("收到来自主题 %s 的消息", msg.Topic())
+		logger.Debug("received message from topic %s", msg.Topic())
 		c.handler(msg.Topic(), msg.Payload())
 	})
 
 	if !token.WaitTimeout(5 * time.Second) {
-		return fmt.Errorf("订阅主题 %s 超时", topic)
+		return fmt.Errorf("subscription to topic %s timed out", topic)
 	}
 
 	if err := token.Error(); err != nil {
 		return err
 	}
 
-	logger.Info("已成功订阅主题: %s", topic)
+	logger.Info("successfully subscribed to topic: %s", topic)
 	return nil
 }
 
-// Disconnect 断开与MQTT服务器的连接
+// Disconnect disconnects from the MQTT broker
 func (c *Client) Disconnect() {
 	c.client.Disconnect(250)
-	logger.Info("已断开与MQTT服务器的连接")
+	logger.Info("disconnected from MQTT broker")
 }
 
-// GetDeviceTypeFromTopic 从主题中提取设备类型
-// 假设主题格式为: devices/{device_type}/{device_name}
+// GetDeviceTypeFromTopic extracts the device type from the topic
+// The topic format is assumed to be: devices/{device_type}/{device_name}
 func GetDeviceTypeFromTopic(topic string) string {
-	// 使用正则表达式匹配主题格式
+	// Use regex to match topic format
 	re := regexp.MustCompile(`devices/([^/]+)/.*`)
 	matches := re.FindStringSubmatch(topic)
 
@@ -187,7 +187,7 @@ func GetDeviceTypeFromTopic(topic string) string {
 		return matches[1]
 	}
 
-	// 尝试简单的分割方法
+	// Try simple split method
 	parts := strings.Split(topic, "/")
 	if len(parts) >= 2 && parts[0] == "devices" {
 		return parts[1]
