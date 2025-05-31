@@ -12,49 +12,49 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-// MySQLStorage 表示MySQL数据库存储后端
+// MySQLStorage represents a MySQL database storage backend
 type MySQLStorage struct {
 	db       *sql.DB
 	dsn      string
 	database string
 }
 
-// NewMySQLStorage 创建一个新的MySQL存储后端
+// NewMySQLStorage creates a new MySQL storage backend
 func NewMySQLStorage(dsn string) (*MySQLStorage, error) {
-	// 解析DSN获取数据库名
+	// Parse DSN to get database name
 	database, serverDSN, err := parseMySQLDSN(dsn)
 	if err != nil {
-		return nil, fmt.Errorf("解析MySQL DSN失败: %v", err)
+		return nil, fmt.Errorf("failed to parse MySQL DSN: %v", err)
 	}
 
-	// 先连接到MySQL服务器（不指定数据库）
+	// First connect to MySQL server (without specifying database)
 	serverDB, err := sql.Open("mysql", serverDSN)
 	if err != nil {
-		return nil, fmt.Errorf("连接MySQL服务器失败: %v", err)
+		return nil, fmt.Errorf("failed to connect to MySQL server: %v", err)
 	}
 	defer serverDB.Close()
 
-	// 创建数据库（如果不存在）
+	// Create database if not exists
 	_, err = serverDB.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", database))
 	if err != nil {
-		return nil, fmt.Errorf("创建数据库失败: %v", err)
+		return nil, fmt.Errorf("failed to create database: %v", err)
 	}
 
-	logger.Info("确保MySQL数据库 %s 存在", database)
+	logger.Info("Ensured MySQL database %s exists", database)
 
-	// 连接到指定的数据库
+	// Connect to specified database
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
-		return nil, fmt.Errorf("连接MySQL数据库失败: %v", err)
+		return nil, fmt.Errorf("failed to connect to MySQL database: %v", err)
 	}
 
-	// 测试连接
+	// Test connection
 	if err := db.Ping(); err != nil {
 		db.Close()
-		return nil, fmt.Errorf("MySQL数据库连接测试失败: %v", err)
+		return nil, fmt.Errorf("MySQL database connection test failed: %v", err)
 	}
 
-	// 设置连接池参数
+	// Set connection pool parameters
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(time.Minute * 5)
@@ -65,29 +65,29 @@ func NewMySQLStorage(dsn string) (*MySQLStorage, error) {
 		database: database,
 	}
 
-	// 初始化数据库和表
+	// Initialize database and tables
 	if err := storage.InitDatabase(); err != nil {
 		db.Close()
-		return nil, fmt.Errorf("初始化MySQL数据库失败: %v", err)
+		return nil, fmt.Errorf("failed to initialize MySQL database: %v", err)
 	}
 
-	logger.Info("MySQL数据库存储初始化成功")
+	logger.Info("MySQL database storage initialized successfully")
 	return storage, nil
 }
 
-// parseMySQLDSN 解析MySQL DSN字符串，提取数据库名和不包含数据库的DSN
+// parseMySQLDSN parses MySQL DSN string, extracts database name and DSN without database
 func parseMySQLDSN(dsn string) (database string, serverDSN string, err error) {
-	// 查找DSN中的数据库名
+	// Find database name in DSN
 	parts := strings.Split(dsn, "/")
 	if len(parts) < 2 {
-		return "", "", fmt.Errorf("DSN格式无效，无法提取数据库名")
+		return "", "", fmt.Errorf("invalid DSN format, unable to extract database name")
 	}
 
-	// 最后一部分可能包含参数
+	// Last part may contain parameters
 	dbParts := strings.Split(parts[len(parts)-1], "?")
 	database = dbParts[0]
 
-	// 创建不包含数据库名的DSN（用于连接到服务器）
+	// Create DSN without database name (for connecting to server)
 	serverDSN = strings.Join(parts[:len(parts)-1], "/") + "/"
 	if len(dbParts) > 1 {
 		serverDSN += "?" + dbParts[1]
@@ -96,9 +96,9 @@ func parseMySQLDSN(dsn string) (database string, serverDSN string, err error) {
 	return database, serverDSN, nil
 }
 
-// InitDatabase 初始化数据库和表
+// InitDatabase initializes database and tables
 func (ms *MySQLStorage) InitDatabase() error {
-	// 创建设备数据表
+	// Create device data table
 	deviceTableSQL := `
 	CREATE TABLE IF NOT EXISTS device_data (
 		id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -113,7 +113,7 @@ func (ms *MySQLStorage) InitDatabase() error {
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 	`
 
-	// 创建设备属性表
+	// Create device attributes table
 	attributeTableSQL := `
 	CREATE TABLE IF NOT EXISTS device_attributes (
 		id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -130,70 +130,70 @@ func (ms *MySQLStorage) InitDatabase() error {
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 	`
 
-	// 执行创建表SQL
+	// Execute table creation SQL
 	_, err := ms.db.Exec(deviceTableSQL)
 	if err != nil {
-		return fmt.Errorf("创建设备数据表失败: %v", err)
+		return fmt.Errorf("failed to create device data table: %v", err)
 	}
 
 	_, err = ms.db.Exec(attributeTableSQL)
 	if err != nil {
-		return fmt.Errorf("创建设备属性表失败: %v", err)
+		return fmt.Errorf("failed to create device attributes table: %v", err)
 	}
 
-	logger.Info("MySQL数据库表初始化成功")
+	logger.Info("MySQL database tables initialized successfully")
 	return nil
 }
 
-// Store 将数据存储到MySQL数据库
+// Store stores data into MySQL database
 func (ms *MySQLStorage) Store(deviceType string, data transformer.DeviceData) error {
-	// 开始事务
+	// Start transaction
 	tx, err := ms.db.Begin()
 	if err != nil {
-		return fmt.Errorf("开始事务失败: %v", err)
+		return fmt.Errorf("failed to start transaction: %v", err)
 	}
 
-	// 确保事务最终会提交或回滚
+	// Ensure transaction will be committed or rolled back
 	defer func() {
 		if err != nil {
 			tx.Rollback()
-			logger.Error("MySQL事务回滚: %v", err)
+			logger.Error("MySQL transaction rolled back: %v", err)
 		}
 	}()
 
-	// 将元数据转换为JSON
+	// Convert metadata to JSON
 	metadataJSON, err := json.Marshal(data.Metadata)
 	if err != nil {
-		return fmt.Errorf("序列化元数据失败: %v", err)
+		return fmt.Errorf("failed to serialize metadata: %v", err)
 	}
 
-	// 插入设备数据
+	// Insert device data
 	deviceSQL := `INSERT INTO device_data (device_name, device_type, timestamp, metadata) VALUES (?, ?, ?, ?)`
 	result, err := tx.Exec(deviceSQL, data.DeviceName, data.DeviceType, data.Timestamp, metadataJSON)
 	if err != nil {
-		return fmt.Errorf("插入设备数据失败: %v", err)
+		return fmt.Errorf("failed to insert device data: %v", err)
 	}
 
-	// 获取插入的ID
+	// Get inserted ID
 	deviceDataID, err := result.LastInsertId()
 	if err != nil {
-		return fmt.Errorf("获取插入ID失败: %v", err)
+		return fmt.Errorf("failed to get insert ID: %v", err)
 	}
 
-	// 批量插入属性
+	// Batch insert attributes
 	if len(data.Attributes) > 0 {
-		// 构建批量插入SQL
+		// Build batch insert SQL
 		valueStrings := make([]string, 0, len(data.Attributes))
 		valueArgs := make([]interface{}, 0, len(data.Attributes)*7)
 
 		for _, attr := range data.Attributes {
-			// 将属性值转换为字符串
+			// Convert attribute value to string
 			valueStr := fmt.Sprintf("%v", attr.Value)
 
-			// 将属性元数据转换为JSON
+			// Convert attribute metadata to JSON
 			attrMetadataJSON, err := json.Marshal(attr.Metadata)
 			if err != nil {
-				return fmt.Errorf("序列化属性元数据失败: %v", err)
+				return fmt.Errorf("failed to serialize attribute metadata: %v", err)
 			}
 
 			valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?)")
@@ -205,27 +205,27 @@ func (ms *MySQLStorage) Store(deviceType string, data transformer.DeviceData) er
 
 		_, err = tx.Exec(attrSQL, valueArgs...)
 		if err != nil {
-			return fmt.Errorf("插入设备属性失败: %v", err)
+			return fmt.Errorf("failed to insert device attributes: %v", err)
 		}
 	}
 
-	// 提交事务
+	// Commit transaction
 	if err = tx.Commit(); err != nil {
-		return fmt.Errorf("提交事务失败: %v", err)
+		return fmt.Errorf("failed to commit transaction: %v", err)
 	}
 
-	logger.Debug("已将 %s 类型的数据存储到MySQL数据库", deviceType)
+	logger.Debug("Stored %s type data in MySQL database", deviceType)
 	return nil
 }
 
-// Close 关闭数据库连接
+// Close closes the database connection
 func (ms *MySQLStorage) Close() error {
 	if ms.db != nil {
 		err := ms.db.Close()
 		if err != nil {
-			return fmt.Errorf("关闭MySQL数据库连接失败: %v", err)
+			return fmt.Errorf("failed to close MySQL database connection: %v", err)
 		}
-		logger.Info("MySQL数据库连接已关闭")
+		logger.Info("MySQL database connection closed")
 	}
 	return nil
 }

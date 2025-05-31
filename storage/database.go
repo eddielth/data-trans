@@ -4,24 +4,24 @@ import (
 	"fmt"
 )
 
-// DatabaseType 表示数据库类型
+// DatabaseType
 type DatabaseType string
 
 const (
-	// MySQL 数据库类型
+	// MySQL
 	MySQL DatabaseType = "mysql"
-	// PostgreSQL 数据库类型
+	// PostgreSQL
 	PostgreSQL DatabaseType = "postgresql"
 )
 
-// DatabaseStorage 表示数据库存储后端的接口
+// DatabaseStorage
 type DatabaseStorage interface {
 	StorageBackend
-	// InitDatabase 初始化数据库和表
+	// InitDatabase
 	InitDatabase() error
 }
 
-// NewDatabaseStorage 创建一个新的数据库存储后端
+// NewDatabaseStorage
 func NewDatabaseStorage(dbType string, dsn string) (DatabaseStorage, error) {
 	switch DatabaseType(dbType) {
 	case MySQL:
@@ -29,6 +29,6 @@ func NewDatabaseStorage(dbType string, dsn string) (DatabaseStorage, error) {
 	case PostgreSQL:
 		return NewPostgreSQLStorage(dsn)
 	default:
-		return nil, fmt.Errorf("不支持的数据库类型: %s", dbType)
+		return nil, fmt.Errorf("unsupported database type: %s", dbType)
 	}
 }
