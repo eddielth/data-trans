@@ -1,24 +1,19 @@
-/**
- * 温度传感器数据转换脚本
- * 将不同格式的温度传感器数据转换为标准格式
- */
-
-// 转换函数，接收原始数据字符串，返回标准化的数据对象
+// Conversion function, receives raw data string, returns standardized data object
 function transform(data) {
-  // 尝试解析JSON数据
+  // Attempt to parse JSON data
   var parsed;
   try {
     parsed = parseJSON(data);
   } catch (e) {
-    // 如果不是JSON格式，尝试其他格式解析
+    // If not JSON format, attempt other format parsing
     return parseNonJsonFormat(data);
   }
   
   if (!parsed) {
-    return { error: "无效的数据格式" };
+    return { error: "Invalid data format" };
   }
   
-  // 处理第一种可能的数据格式 (例如: {"temp": 25.5, "unit": "C", "device_name": "temp001"})
+  // Process first possible data format (e.g.: {"temp": 25.5, "unit": "C", "device_name": "temp001"})
   if (parsed.temp !== undefined) {
     return {
       device_name: parsed.device_name || "unknown",
@@ -38,7 +33,7 @@ function transform(data) {
     };
   }
   
-  // 处理第二种可能的数据格式 (例如: {"temperature": {"value": 25.5, "scale": "celsius"}, "sensor": {"id": "temp001"}})
+  // Process second possible data format (e.g.: {"temperature": {"value": 25.5, "scale": "celsius"}, "sensor": {"id": "temp001"}})
   if (parsed.temperature && typeof parsed.temperature === "object") {
     return {
       device_name: parsed.sensor && parsed.sensor.id ? parsed.sensor.id : "unknown",
@@ -58,7 +53,7 @@ function transform(data) {
     };
   }
   
-  // 处理第三种可能的数据格式 (例如: {"readings": [{"type": "temperature", "value": 25.5}], "id": "temp001"})
+  // Process third possible data format (e.g.: {"readings": [{"type": "temperature", "value": 25.5}], "id": "temp001"})
   if (parsed.readings && Array.isArray(parsed.readings)) {
     var tempReading = parsed.readings.find(function(r) {
       return r.type === "temperature" || r.name === "temperature";
@@ -84,33 +79,33 @@ function transform(data) {
     }
   }
   
-  // 无法识别的格式
+  // Unrecognized format
   return {
-    error: "未知的温度传感器数据格式",
+    error: "Unknown temperature sensor data format",
     raw: parsed
   };
 }
 
-// 辅助函数：转换温度单位标识为标准格式
+// Helper function: Convert temperature unit identifier to standard format
 function convertTemperatureUnit(unit) {
   if (!unit) return "C";
   
   unit = unit.toLowerCase();
   
-  if (unit === "c" || unit === "celsius" || unit === "摄氏") {
+  if (unit === "c" || unit === "celsius" || unit === "celsius") {
     return "C";
-  } else if (unit === "f" || unit === "fahrenheit" || unit === "华氏") {
+  } else if (unit === "f" || unit === "fahrenheit" || unit === "fahrenheit") {
     return "F";
-  } else if (unit === "k" || unit === "kelvin" || unit === "开尔文") {
+  } else if (unit === "k" || unit === "kelvin" || unit === "kelvin") {
     return "K";
   }
   
   return unit;
 }
 
-// 辅助函数：解析非JSON格式的数据
+// Helper function: Parse non-JSON format data
 function parseNonJsonFormat(data) {
-  // 尝试解析简单的键值对格式 (例如: "temp=25.5,unit=C,id=temp001")
+  // Attempt to parse simple key-value format (e.g.: "temp=25.5,unit=C,id=temp001")
   if (data.indexOf("=") !== -1) {
     var result = {};
     var pairs = data.split(",");
@@ -121,7 +116,7 @@ function parseNonJsonFormat(data) {
         var key = parts[0].trim();
         var value = parts[1].trim();
         
-        // 尝试将数值转换为数字
+        // Attempt to convert numeric values to numbers
         if (!isNaN(value)) {
           value = parseFloat(value);
         }
@@ -130,7 +125,7 @@ function parseNonJsonFormat(data) {
       }
     }
     
-    // 检查是否找到温度数据
+    // Check if temperature data was found
     if (result.temp !== undefined || result.temperature !== undefined) {
       return {
         device_name: result.id || result.device_name || "unknown",
@@ -142,21 +137,21 @@ function parseNonJsonFormat(data) {
     }
   }
   
-  // 尝试解析简单的数字格式 (假设只是一个温度值)
+  // Attempt to parse simple numeric format (assume only a temperature value)
   var numValue = parseFloat(data);
   if (!isNaN(numValue)) {
     return {
       device_name: "unknown",
       timestamp: Date.now(),
       temperature: numValue,
-      unit: "C",  // 假设默认单位是摄氏度
+      unit: "C",  // Default unit assumed as Celsius
       raw: data
     };
   }
   
-  // 无法解析的格式
+  // Unparseable format
   return {
-    error: "无法解析的数据格式",
+    error: "Unparseable data format",
     raw: data
   };
 }

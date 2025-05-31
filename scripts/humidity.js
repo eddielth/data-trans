@@ -1,28 +1,23 @@
-/**
- * 湿度传感器数据转换脚本
- * 将不同格式的湿度传感器数据转换为标准格式
- */
-
-// 转换函数，接收原始数据字符串，返回标准化的数据对象
+// Conversion function, receives raw data string, returns standardized data object
 function transform(data) {
-  log("处理湿度传感器数据: " + data);
+  log("Processing humidity sensor data: " + data);
 
-  console.log("处理湿度传感器数据: " + data);
+  console.log("Processing humidity sensor data: " + data);
   
-  // 尝试解析JSON数据
+  // Attempt to parse JSON data
   var parsed;
   try {
     parsed = parseJSON(data);
   } catch (e) {
-    // 如果不是JSON格式，尝试其他格式解析
+    // If not JSON format, attempt other format parsing
     return parseNonJsonFormat(data);
   }
   
   if (!parsed) {
-    return { error: "无效的数据格式" };
+    return { error: "Invalid data format" };
   }
   
-  // 处理第一种可能的数据格式 (例如: {"humidity": 65, "device_name": "hum001"})
+  // Process first possible data format (e.g.: {"humidity": 65, "device_name": "hum001"})
   if (parsed.humidity !== undefined) {
     return {
       device_name: parsed.device_name || "unknown",
@@ -42,7 +37,7 @@ function transform(data) {
     };
   }
   
-  // 处理第二种可能的数据格式 (例如: {"data": {"hum": 65}, "id": "hum001"})
+  // Process second possible data format (e.g.: {"data": {"hum": 65}, "id": "hum001"})
   if (parsed.data && typeof parsed.data === "object" && parsed.data.hum !== undefined) {
     return {
       device_name: parsed.id || "unknown",
@@ -62,7 +57,7 @@ function transform(data) {
     };
   }
   
-  // 处理第三种可能的数据格式 (例如: {"readings": [{"type": "humidity", "value": 65}], "id": "hum001"})
+  // Process third possible data format (e.g.: {"readings": [{"type": "humidity", "value": 65}], "id": "hum001"})
   if (parsed.readings && Array.isArray(parsed.readings)) {
     var humReading = parsed.readings.find(function(r) {
       return r.type === "humidity" || r.name === "humidity" || r.type === "hum";
@@ -88,16 +83,16 @@ function transform(data) {
     }
   }
   
-  // 无法识别的格式
+  // Unrecognized format
   return {
-    error: "未知的湿度传感器数据格式",
+    error: "Unknown humidity sensor data format",
     raw: parsed
   };
 }
 
-// 辅助函数：解析非JSON格式的数据
+// Helper function: Parse non-JSON format data
 function parseNonJsonFormat(data) {
-  // 尝试解析简单的键值对格式 (例如: "hum=65,id=hum001")
+  // Attempt to parse simple key-value format (e.g.: "hum=65,id=hum001")
   if (data.indexOf("=") !== -1) {
     var result = {};
     var pairs = data.split(",");
@@ -108,7 +103,7 @@ function parseNonJsonFormat(data) {
         var key = parts[0].trim();
         var value = parts[1].trim();
         
-        // 尝试将数值转换为数字
+        // Attempt to convert numeric values to numbers
         if (!isNaN(value)) {
           value = parseFloat(value);
         }
@@ -117,7 +112,7 @@ function parseNonJsonFormat(data) {
       }
     }
     
-    // 检查是否找到湿度数据
+    // Check if humidity data was found
     if (result.hum !== undefined || result.humidity !== undefined) {
       return {
         device_name: result.id || result.device_name || "unknown",
@@ -128,7 +123,7 @@ function parseNonJsonFormat(data) {
     }
   }
   
-  // 尝试解析简单的数字格式 (假设只是一个湿度值)
+  // Attempt to parse simple numeric format (assume only a humidity value)
   var numValue = parseFloat(data);
   if (!isNaN(numValue)) {
     return {
@@ -139,9 +134,9 @@ function parseNonJsonFormat(data) {
     };
   }
   
-  // 无法解析的格式
+  // Unparseable format
   return {
-    error: "无法解析的数据格式",
+    error: "Unparseable data format",
     raw: data
   };
 }
