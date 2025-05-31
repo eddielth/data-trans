@@ -1,61 +1,61 @@
 # Data-Trans
 
-一个基于Go语言的物联网设备数据转换服务，用于接收、转换、验证和存储来自各种设备的数据。
+A Go-based IoT device data transformation service for receiving, transforming, validating, and storing data from various devices.
 
-## 功能特点
+## Features
 
-- 支持通过MQTT协议接收设备数据
-- 使用JavaScript脚本进行灵活的数据转换
-- 支持多种设备类型（温度传感器、湿度传感器、网关设备等）
-- 配置文件热重载，无需重启服务即可更新转换规则
-- 高并发处理能力，适合大规模设备数据处理
-- 多种存储后端支持（文件、MySQL、PostgreSQL）
-- 完善的日志系统，支持文件和控制台输出
-- 数据验证功能，确保数据质量
+- Supports receiving device data via MQTT protocol
+- Flexible data transformation using JavaScript scripts
+- Supports multiple device types (temperature sensors, humidity sensors, gateway devices, etc.)
+- Hot reload configuration files, update transformation rules without restarting the service
+- High concurrency processing capability, suitable for large-scale device data processing
+- Supports multiple storage backends (file, MySQL, PostgreSQL)
+- Comprehensive logging system, supports file and console output
+- Data validation function to ensure data quality
 
-## 系统架构
+## System Architecture
 
-系统主要由以下几个部分组成：
+The system mainly consists of the following parts:
 
-1. **MQTT客户端**：负责连接MQTT服务器，订阅设备主题，接收设备数据
-2. **转换器管理器**：管理不同设备类型的数据转换器
-3. **JavaScript引擎**：执行数据转换脚本
-4. **存储系统**：支持多种存储后端，包括文件存储和数据库存储
-5. **配置管理**：加载和监控配置文件变化，支持热重载
-6. **日志系统**：记录系统运行状态和错误信息
-7. **验证器**：验证数据的有效性和合法性
+1. **MQTT Client**: Responsible for connecting to the MQTT server, subscribing to device topics, receiving device data
+2. **Transformer Manager**: Manages data transformers for different device types
+3. **JavaScript Engine**: Executes data transformation scripts
+4. **Storage System**: Supports multiple storage backends, including file storage and database storage
+5. **Configuration Management**: Loads and monitors configuration file changes, supports hot reload
+6. **Logging System**: Records system running status and error information
+7. **Validator**: Validates the validity and legality of data
 
-## 安装
+## Installation
 
-### 前置条件
+### Prerequisites
 
-- Go 1.23或更高版本
-- MQTT服务器（如Mosquitto、EMQ X等）
-- 可选：MySQL或PostgreSQL数据库
+- Go 1.23 or higher
+- MQTT server (such as Mosquitto, EMQ X, etc.)
+- Optional: MySQL or PostgreSQL database
 
-### 从源码安装
+### Install from Source
 
 ```bash
-# 克隆仓库
+# Clone the repository
 git clone https://github.com/eddielth/data-trans.git
 cd data-trans
 
-# 安装依赖
+# Install dependencies
 go mod download
 
-# 编译
+# Compile
 go build -o data-trans
 
-# 运行
+# Run
 ./data-trans
 ```
 
-## 配置
+## Configuration
 
-服务使用YAML格式的配置文件`config.yaml`，配置示例：
+Service uses YAML formatted configuration file `config.yaml`, configuration example:
 
 ```yaml
-# MQTT配置
+# MQTT configuration
 mqtt:
   broker: "tcp://localhost:1883"
   client_id: "data-trans-client"
@@ -65,86 +65,86 @@ mqtt:
     - "devices/temperature/+"
     - "devices/humidity/+"
 
-# 日志配置
+# Logging configuration
 logger:
-  level: "DEBUG"       # 日志级别: DEBUG, INFO, WARN, ERROR
-  file_path: "./logs/app.log"  # 日志文件路径
-  max_size: 10        # 单个日志文件最大大小（MB）
-  max_backups: 5      # 最大保留的日志文件数量
-  console: true       # 是否同时输出到控制台
+  level: "DEBUG"       # Log level: DEBUG, INFO, WARN, ERROR
+  file_path: "./logs/app.log"  # Log file path
+  max_size: 10        # Single log file maximum size (MB)
+  max_backups: 5      # Maximum number of log files to retain
+  console: true       # Whether to log to the console
 
-# 存储配置
+# Storage configuration
 storage:
-  # 文件存储
+  # File storage
   file:
     enabled: true
     path: "./data"
-  # 数据库存储
+  # Database storage
   database:
     enabled: true
-    # 数据库类型: mysql 或 postgresql
+    # Database type: mysql or postgresql
     type: "mysql"
-    # MySQL连接字符串示例: user:password@tcp(localhost:3306)/data_trans
-    # PostgreSQL连接字符串示例: postgres://user:password@localhost:5432/data_trans?sslmode=disable
+    # MySQL connection string example: user:password@tcp(localhost:3306)/data_trans
+    # PostgreSQL connection string example: postgres://user:password@localhost:5432/data_trans?sslmode=disable
     dsn: "user:password@tcp(localhost:3306)/data_trans"
 
-# 转换器配置
+# Transformer configuration
 transformers:
-  # 温度传感器转换器
+  # Temperature sensor transformer
   temperature:
     script_path: "./scripts/temperature.js"
   
-  # 湿度传感器转换器
+  # Humidity sensor transformer
   humidity:
     script_path: "./scripts/humidity.js"
 ```
 
-### 配置项说明
+### Configuration Options
 
-#### MQTT配置
+#### MQTT Configuration
 
-- `broker`: MQTT服务器地址
-- `client_id`: 客户端ID
-- `username`: 用户名（可选）
-- `password`: 密码（可选）
-- `topics`: 要订阅的主题列表
+- `broker`: MQTT server address
+- `client_id`: Client ID
+- `username`: Username (optional)
+- `password`: Password (optional)
+- `topics`: List of topics to subscribe
 
-#### 日志配置
+#### Logging Configuration
 
-- `level`: 日志级别（DEBUG, INFO, WARN, ERROR）
-- `file_path`: 日志文件路径
-- `max_size`: 单个日志文件最大大小（MB）
-- `max_backups`: 最大保留的日志文件数量
-- `console`: 是否同时输出到控制台
+- `level`: Log level (DEBUG, INFO, WARN, ERROR)
+- `file_path`: Log file path
+- `max_size`: Single log file maximum size (MB)
+- `max_backups`: Maximum number of log files to retain
+- `console`: Whether to log to the console
 
-#### 存储配置
+#### Storage Configuration
 
-- `file`: 文件存储配置
-  - `enabled`: 是否启用文件存储
-  - `path`: 文件存储路径
-- `database`: 数据库存储配置
-  - `enabled`: 是否启用数据库存储
-  - `type`: 数据库类型（mysql 或 postgresql）
-  - `dsn`: 数据库连接字符串
+- `file`: File storage configuration
+  - `enabled`: Whether to enable file storage
+  - `path`: File storage path
+- `database`: Database storage configuration
+  - `enabled`: Whether to enable database storage
+  - `type`: Database type (mysql or postgresql)
+  - `dsn`: Database connection string
 
-#### 转换器配置
+#### Transformer Configuration
 
-每个设备类型可以配置一个转换器，有两种方式提供转换脚本：
+Each device type can configure a transformer, with two ways to provide transformation scripts:
 
-1. `script_path`: 外部JavaScript文件路径
-2. `script_code`: 内联JavaScript代码
+1. `script_path`: External JavaScript file path
+2. `script_code`: Inline JavaScript code
 
-## 数据转换脚本
+## Data Transformation Scripts
 
-转换脚本必须提供一个名为`transform`的函数，该函数接收原始数据字符串，返回转换后的数据对象。
+Transformation scripts must provide a function named `transform`, which receives the original data string and returns the transformed data object.
 
 ```javascript
 function transform(data) {
-  // 解析数据
+  // Parse data
   var parsed = parseJSON(data);
-  if (!parsed) return { error: "无效的数据格式" };
+  if (!parsed) return { error: "Invalid data format" };
   
-  // 转换数据
+  // Transform data
   return {
     device_name: parsed.id || "unknown",
     device_type: "temperature",
@@ -164,95 +164,95 @@ function transform(data) {
 }
 ```
 
-### 可用的辅助函数
+### Available Helper Functions
 
-- `log(message)`: 输出日志
-- `parseJSON(jsonString)`: 解析JSON字符串
-- `formatDate(timestamp, format)`: 格式化日期时间
-- `convertTemperature(value, fromUnit, toUnit)`: 温度单位转换
-- `validateRange(value, min, max)`: 验证数值是否在指定范围内
+- `log(message)`: Output log
+- `parseJSON(jsonString)`: Parse JSON string
+- `formatDate(timestamp, format)`: Format date and time
+- `convertTemperature(value, fromUnit, toUnit)`: Temperature unit conversion
+- `validateRange(value, min, max)`: Validate if a value is within the specified range
 
-## 设备数据结构
+## Device Data Structure
 
-系统使用统一的设备数据结构来表示不同类型的设备数据：
+The system uses a unified device data structure to represent different types of device data:
 
 ```go
 type DeviceData struct {
-  DeviceName string                 `json:"device_name"` // 设备名字
-  DeviceType string                 `json:"device_type"` // 设备类型（从Topic获取）
-  Timestamp  int64                  `json:"timestamp"`   // 数据时间戳
-  Attributes []DeviceAttribute      `json:"attributes"`  // 设备属性列表
-  Metadata   map[string]interface{} `json:"metadata"`    // 额外元数据
+  DeviceName string                 `json:"device_name"` // Device name
+  DeviceType string                 `json:"device_type"` // Device type (obtained from Topic)
+  Timestamp  int64                  `json:"timestamp"`   // Data timestamp
+  Attributes []DeviceAttribute      `json:"attributes"`  // Device attribute list
+  Metadata   map[string]interface{} `json:"metadata"`    // Additional metadata
 }
 
 type DeviceAttribute struct {
-  Name     string      `json:"name"`     // 属性名称
-  Type     string      `json:"type"`     // 属性类型
-  Value    interface{} `json:"value"`    // 属性值
-  Unit     string      `json:"unit"`     // 单位（可选）
-  Quality  int         `json:"quality"`  // 数据质量（0-100）
-  Metadata interface{} `json:"metadata"` // 属性相关元数据
+  Name     string      `json:"name"`     // Attribute name
+  Type     string      `json:"type"`     // Attribute type
+  Value    interface{} `json:"value"`    // Attribute value
+  Unit     string      `json:"unit"`     // Unit (optional)
+  Quality  int         `json:"quality"`  // Data quality (0-100)
+  Metadata interface{} `json:"metadata"` // Attribute-related metadata
 }
 ```
 
-## 主题格式
+## Topic Format
 
-服务默认使用以下格式的主题：
+The service defaults to using topics in the following format:
 
 ```
 devices/{device_type}/{device_name}
 ```
 
-例如：
+For example:
 - `devices/temperature/temp001`
 - `devices/humidity/hum001`
 
-## 开发
+## Development
 
-### 项目结构
+### Project Structure
 
 ```
 .
-├── config/             # 配置相关代码
+├── config/             # Configuration-related code
 │   └── config.go
-├── logger/             # 日志系统
+├── logger/             # Logging system
 │   ├── instance.go
 │   └── logger.go
-├── mqtt/               # MQTT客户端
+├── mqtt/               # MQTT client
 │   └── client.go
-├── scripts/            # 转换脚本
+├── scripts/            # Transformation scripts
 │   ├── humidity.js
 │   └── temperature.js
-├── storage/            # 存储系统
+├── storage/            # Storage system
 │   ├── database.go
 │   ├── file.go
 │   ├── mysql.go
 │   ├── postgresql.go
 │   └── storage.go
-├── transformer/        # 转换器
+├── transformer/        # Transformer
 │   ├── device_data.go
 │   └── manager.go
-├── validator/          # 数据验证
+├── validator/          # Data validation
 │   └── validator.go
-├── config.yaml         # 配置文件
+├── config.yaml         # Configuration file
 ├── go.mod
 ├── go.sum
 ├── main.go
 └── README.md
 ```
 
-### 添加新的设备类型
+### Adding New Device Types
 
-1. 在`scripts/`目录下创建对应的转换脚本
-2. 在配置文件中添加新的转换器配置
+1. Create corresponding transformation scripts in the `scripts/` directory
+2. Add new transformer configuration in the configuration file
 
-### 添加新的存储后端
+### Adding New Storage Backends
 
-1. 在`storage/`目录下创建新的存储后端实现
-2. 实现`StorageBackend`接口
-3. 在`storage/database.go`中添加新的存储后端类型
-4. 在配置文件中添加新的存储后端配置
+1. Create new storage backend implementation in the `storage/` directory
+2. Implement the `StorageBackend` interface
+3. Add new storage backend type in `storage/database.go`
+4. Add new storage backend configuration in the configuration file
 
-## 贡献
+## Contributing
 
-欢迎提交问题和拉取请求！
+Issues and pull requests are welcome!

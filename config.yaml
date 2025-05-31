@@ -1,4 +1,4 @@
-# MQTT配置
+# MQTT configuration
 mqtt:
   broker: "tcp://localhost:1883"
   client_id: "data-trans-client"
@@ -7,33 +7,33 @@ mqtt:
   topics:
     - "devices/temperature/+"
     - "devices/humidity/+"
-# 日志配置
+# Logging configuration
 logger:
-  level: "DEBUG"       # 日志级别: DEBUG, INFO, WARN, ERROR
-  file_path: "./logs/app.log"  # 日志文件路径
-  max_size: 10        # 单个日志文件最大大小（MB）
-  max_backups: 5      # 最大保留的日志文件数量
-  console: true       # 是否同时输出到控制台
-# 存储配置
+  level: "DEBUG"       # Log level: DEBUG, INFO, WARN, ERROR
+  file_path: "./logs/app.log"  # Log file path
+  max_size: 10        # Single log file maximum size (MB)
+  max_backups: 5      # Maximum number of log files to retain
+  console: true       # Whether to log to the console
+# Storage configuration
 storage:
-  # 文件存储
+  # File storage
   file:
     enabled: true
     path: "./data"
-  # 数据库存储
+  # Database storage
   database:
     enabled: true
-    # 数据库类型: mysql 或 postgresql
+    # Database type: mysql or postgresql
     type: "mysql"
-    # MySQL连接字符串示例: user:password@tcp(localhost:3306)/data_trans
-    # PostgreSQL连接字符串示例: postgres://user:password@localhost:5432/data_trans?sslmode=disable
+    # MySQL connection string example: user:password@tcp(localhost:3306)/data_trans
+    # PostgreSQL connection string example: postgres://user:password@localhost:5432/data_trans?sslmode=disable
     dsn: "user:password@tcp(localhost:3306)/data_trans"
-# 转换器配置
+# Transformer configuration
 transformers:
-  # 温度传感器转换器
+  # Temperature sensor transformer
   temperature:
     script_path: "./scripts/temperature.js"
   
-  # 湿度传感器转换器
+  # Humidity sensor transformer
   humidity:
     script_path: "./scripts/humidity.js"

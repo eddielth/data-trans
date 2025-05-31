@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Config 表示应用程序的配置
+// Config represents the application's configuration
 type Config struct {
 	MQTT         MQTTConfig             `mapstructure:"mqtt"`
 	Transformers map[string]Transformer `mapstructure:"transformers"`
@@ -17,7 +17,7 @@ type Config struct {
 	Logger       LoggerConfig           `mapstructure:"logger"`
 }
 
-// MQTTConfig 表示MQTT连接的配置
+// MQTTConfig represents the configuration for MQTT connection
 type MQTTConfig struct {
 	Broker   string   `mapstructure:"broker"`
 	ClientID string   `mapstructure:"client_id"`
@@ -26,13 +26,13 @@ type MQTTConfig struct {
 	Topics   []string `mapstructure:"topics"`
 }
 
-// Transformer 表示数据转换器的配置
+// Transformer represents the configuration for data transformers
 type Transformer struct {
 	ScriptPath string `mapstructure:"script_path"`
 	ScriptCode string `mapstructure:"script_code"`
 }
 
-// LoggerConfig 表示日志配置
+// LoggerConfig represents the configuration for logging
 type LoggerConfig struct {
 	Level      string `mapstructure:"level"`
 	FilePath   string `mapstructure:"file_path"`
@@ -41,10 +41,10 @@ type LoggerConfig struct {
 	Console    bool   `mapstructure:"console"`
 }
 
-// ConfigChangeCallback 是配置文件变更时的回调函数类型
+// ConfigChangeCallback is the callback function type for configuration file changes
 type ConfigChangeCallback func(cfg *Config) error
 
-// LoadConfig 从指定路径加载配置文件
+// LoadConfig loads the configuration file from the specified path
 func LoadConfig(configPath string) (*Config, error) {
 	viper.SetConfigFile(configPath)
 	viper.SetConfigType("yaml")
@@ -63,68 +63,68 @@ func LoadConfig(configPath string) (*Config, error) {
 	return &config, nil
 }
 
-// WatchConfig 监听配置文件变化并调用回调函数
+// WatchConfig monitors configuration file changes and calls the callback function
 func WatchConfig(configPath string, callback ConfigChangeCallback) error {
-	// 获取配置文件的绝对路径
+	// Get the absolute path of the configuration file
 	absPath, err := filepath.Abs(configPath)
 	if err != nil {
 		return err
 	}
 
-	// 设置Viper监听配置文件变化
+	// Set Viper to watch configuration file changes
 	viper.SetConfigFile(absPath)
 	viper.WatchConfig()
 
-	// 防抖动处理，避免短时间内多次触发
+	// Debounce handling to avoid multiple triggers in a short time
 	var lastChangeTime time.Time
 	var debounceInterval = 2 * time.Second
 
 	viper.OnConfigChange(func(e fsnotify.Event) {
-		// 检查是否是写入操作
+		// Check if it's a write operation
 		if e.Op&fsnotify.Write == fsnotify.Write {
-			// 防抖动处理
+			// Debounce handling
 			now := time.Now()
 			if now.Sub(lastChangeTime) < debounceInterval {
 				return
 			}
 			lastChangeTime = now
 
-			logger.Info("检测到配置文件变更: %s", e.Name)
+			logger.Info("Configuration file change detected: %s", e.Name)
 
-			// 重新加载配置
+			// Reload configuration
 			var newConfig Config
 			err := viper.Unmarshal(&newConfig)
 			if err != nil {
-				logger.Error("解析更新后的配置失败: %v", err)
+				logger.Error("Failed to parse updated configuration: %v", err)
 				return
 			}
 
-			// 调用回调函数处理新配置
+			// Call callback function to handle new configuration
 			if err := callback(&newConfig); err != nil {
-				logger.Error("应用新配置失败: %v", err)
+				logger.Error("Failed to apply new configuration: %v", err)
 				return
 			}
 
-			logger.Info("配置已成功更新并应用")
+			logger.Info("Configuration has been successfully updated and applied")
 		}
 	})
 
 	return nil
 }
 
-// StorageConfig 表示存储配置
+// StorageConfig represents storage configuration
 type StorageConfig struct {
 	File     FileStorageConfig     `mapstructure:"file"`
 	Database DatabaseStorageConfig `mapstructure:"database"`
 }
 
-// FileStorageConfig 表示文件存储配置
+// FileStorageConfig represents file storage configuration
 type FileStorageConfig struct {
 	Enabled bool   `mapstructure:"enabled"`
 	Path    string `mapstructure:"path"`
 }
 
-// DatabaseStorageConfig 表示数据库存储配置
+// DatabaseStorageConfig represents database storage configuration
 type DatabaseStorageConfig struct {
 	Enabled bool   `mapstructure:"enabled"`
 	Type    string `mapstructure:"type"`
